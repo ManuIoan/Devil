@@ -15,22 +15,47 @@ touches anyone else's data.
 
 ## What it does
 
-All actions below are **read-only** and run against the official Graph API
-(`graph.facebook.com`, pinned to `v21.0`):
+All actions run against the official Graph API (`graph.facebook.com`, pinned
+to `v21.0`). Everything about your personal account is **read-only**; the only
+write actions are on a Facebook **Page you administer** (and each one asks for
+confirmation first):
 
-| Option | What it shows |
-| ------ | ------------- |
-| Show my profile | Your own `id` and `name` (`public_profile`) |
-| Show my token's permissions | Which scopes your token was granted |
-| List my own posts | Your own posts, newest first (`user_posts`) |
-| Show my friend count | Your total friend count only (see caveat below) |
-| Export my own posts | Save your own posts to a JSON file (`user_posts`) |
-| Explain write actions | Why deleting posts / accepting requests / unfriending isn't possible |
+| Option | What it does | Permission needed |
+| ------ | ------------ | ----------------- |
+| Show my profile | Your own `id` and `name` | `public_profile` |
+| Show my token's permissions | Which scopes your token was granted | — |
+| List my own posts | Your own posts, newest first (read-only) | `user_posts` |
+| Show my friend count | Your total friend count only (see caveat) | `user_friends` |
+| Export a full backup | Save profile, friend count, posts (+comment/reaction counts), and your uploaded photo/video metadata to a JSON file | `user_posts`, `user_photos`, `user_videos` |
+| Token info | Validity, scopes, and expiry of your token, plus how to refresh | optional app token |
+| Pages I manage | Post to, read insights for, and reply to comments on a Page you administer | `pages_show_list`, `pages_manage_posts`, `read_insights`, `pages_manage_engagement` |
+| What's not possible | Why deleting posts / requests / unfriending / personal posting isn't available | — |
 
-The export writes a JSON file (default `my_posts_<timestamp>.json`, or a name
-you choose) containing each post's id, created time, message/story text, and
-permalink. It is a read-only backup of your own content — it does not change
-or delete anything on Facebook.
+### Full backup
+
+The backup writes a JSON file (default `fb_backup_<timestamp>.json`, or a name
+you choose) with your profile, friend count, your posts (each with its
+aggregate comment and reaction **counts** — never who commented or reacted),
+and metadata for your uploaded photos and videos. Any section whose permission
+your token is missing is skipped with a note, rather than failing the whole
+export. It is a read-only backup of your own content and changes nothing on
+Facebook.
+
+### Pages you manage
+
+If you administer a Facebook **Page**, the Pages menu can publish a post to it,
+read basic insights, and reply to comments on its posts. These are the one set
+of *write* actions the official API supports, because they act on a Page you
+control (not on a personal timeline). Each action asks for confirmation before
+it posts. The tool uses the per-Page access token that `/me/accounts` returns.
+
+### Token info
+
+Shows whether your token is valid, its scopes, and its expiry, and prints the
+official `fb_exchange_token` flow for getting a long-lived token. Facebook's
+`/debug_token` endpoint is designed to be called with an **app** access token,
+so set `FB_APP_TOKEN="APP_ID|APP_SECRET"` for best results (it falls back to
+the user token, which some apps reject).
 
 ## What was removed, and why
 
@@ -52,26 +77,27 @@ is held **in memory only**, and the tool installs and deletes nothing.
 
 ## What is *not* possible (and isn't faked)
 
-The three "self-account" write actions from the original tool are **not
-available** through the official Graph API for a normal third-party app on a
-personal account, so this rebuild does **not** implement them:
+Several write actions are **not available** through the official Graph API for
+a normal third-party app on a *personal* account, so this rebuild does **not**
+implement them (rather than faking them or impersonating the mobile app):
 
 - **Unfriend** — the `/me/friends` edge is documented as read-only ("You
   can't delete using this edge") and was removed after Graph API v3.2.
 - **Accept friend requests** — there is no official edge to read or accept a
   person's incoming friend requests.
-- **Delete your own posts** — publishing to and deleting from a personal
-  timeline was removed together with the `publish_actions` permission in 2018.
-  `user_posts` grants read-only access only.
+- **Delete your own posts** — removed together with the `publish_actions`
+  permission in 2018. `user_posts` grants read-only access only.
+- **Post to your personal timeline / upload a personal photo** — also removed
+  with `publish_actions` in 2018. Third-party apps can no longer publish to a
+  personal profile. (Posting to a **Page** you manage *is* supported — see the
+  Pages menu above.)
 
 Even the friend count is limited: the Graph API only returns a *number*, and
 only counts friends who also use the same app — it cannot list, add, or remove
 friends.
 
-To actually delete posts, manage friend requests, or unfriend, use the
-Facebook website or app directly. (Post management *is* available via the API
-for **Pages you administer**, which is a different thing from your personal
-timeline and out of scope for this tool.)
+To delete posts, manage friend requests, unfriend, or post to your personal
+timeline, use the Facebook website or app directly.
 
 ---
 
@@ -93,14 +119,36 @@ pip install -r requirements.txt
 4. Add the permissions you want to use and grant them for **your own**
    account:
    - `public_profile` — profile (name + id)
-   - `user_posts` — list your own posts
+   - `user_posts` — list / export your own posts
    - `user_friends` — your friend count
+   - `user_photos`, `user_videos` — include uploaded photo/video metadata in
+     the backup
+   - `pages_show_list`, `pages_manage_posts`, `read_insights`,
+     `pages_manage_engagement` — only if you want the Pages features
 5. Copy the generated **User Token**.
 
+> Several of these permissions (`user_posts`, `user_photos`, `user_videos`, the
+> `pages_*` set) require Facebook **App Review / Advanced Access** before they
+> work outside your own test users. Features whose permission you don't have
+> simply report that and are skipped — nothing is faked.
+
 Tokens from the Explorer are short-lived (about an hour), which is fine for a
-quick session. See Facebook's docs on
+quick session. The **Token info** menu option shows your token's expiry and
+prints the official flow for exchanging it for a long-lived token. See
+Facebook's docs on
 [access tokens](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/)
-for longer-lived tokens.
+for details.
+
+### Optional: app token for token inspection
+
+`/debug_token` is meant to be called with an app access token. To use the
+Token info option reliably, set:
+
+```bash
+export FB_APP_TOKEN="APP_ID|APP_SECRET"
+```
+
+Keep your app secret off shared machines and out of version control.
 
 ## Usage
 
