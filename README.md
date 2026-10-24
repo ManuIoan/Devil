@@ -24,7 +24,13 @@ All actions below are **read-only** and run against the official Graph API
 | Show my token's permissions | Which scopes your token was granted |
 | List my own posts | Your own posts, newest first (`user_posts`) |
 | Show my friend count | Your total friend count only (see caveat below) |
+| Export my own posts | Save your own posts to a JSON file (`user_posts`) |
 | Explain write actions | Why deleting posts / accepting requests / unfriending isn't possible |
+
+The export writes a JSON file (default `my_posts_<timestamp>.json`, or a name
+you choose) containing each post's id, created time, message/story text, and
+permalink. It is a read-only backup of your own content — it does not change
+or delete anything on Facebook.
 
 ## What was removed, and why
 

@@ -6,7 +6,9 @@ otherwise it is prompted for (hidden input). It is kept only in memory.
 
 from __future__ import annotations
 
+import json
 import os
+from datetime import datetime
 from getpass import getpass
 from typing import Optional
 
@@ -25,7 +27,8 @@ MENU = """\
   [2] Show which permissions my token has
   [3] List my own posts (read-only)
   [4] Show my friend count
-  [5] What about delete posts / accept requests / unfriend?
+  [5] Export my own posts to a file (JSON)
+  [6] What about delete posts / accept requests / unfriend?
   [0] Exit"""
 
 
@@ -84,12 +87,51 @@ def _action_posts(client: GraphAPIClient) -> None:
         print(f"\n  Listed {count} post(s). This view is read-only.")
 
 
+def _action_export_posts(client: GraphAPIClient) -> None:
+    default_name = f"my_posts_{datetime.now():%Y%m%d_%H%M%S}.json"
+    try:
+        raw = input(f"\n  Save to file [{default_name}]: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\n  Export cancelled.")
+        return
+    path = raw or default_name
+
+    print("\n  Fetching your posts (needs the 'user_posts' permission)...")
+    posts = [
+        {
+            "id": post.id,
+            "created_time": post.created_time,
+            "message": post.message,
+            "story": post.story,
+            "permalink_url": post.permalink_url,
+        }
+        for post in client.iter_posts()
+    ]
+    if not posts:
+        print("  No posts returned — nothing exported. (Check the 'user_posts'")
+        print("  permission on your token.)")
+        return
+
+    export = {
+        "exported_at": datetime.now().astimezone().isoformat(),
+        "post_count": len(posts),
+        "posts": posts,
+    }
+    try:
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(export, fh, ensure_ascii=False, indent=2)
+    except OSError as exc:
+        print(f"\n  [!] Could not write '{path}': {exc}")
+        return
+    print(f"\n  Exported {len(posts)} post(s) to {os.path.abspath(path)}")
+
+
 def _action_friend_count(client: GraphAPIClient) -> None:
     info = client.friend_summary()
     total = info.get("total_count")
     print(f"\n  Total friends: {total if total is not None else '(not available)'}")
     print("  Note: the official API only exposes a count — it cannot list,")
-    print("  add, or remove friends. See option [5] for details.")
+    print("  add, or remove friends. See option [6] for details.")
 
 
 def _action_explain_writes() -> None:
@@ -155,7 +197,8 @@ def run() -> int:
             "2": lambda: _action_permissions(client),
             "3": lambda: _action_posts(client),
             "4": lambda: _action_friend_count(client),
-            "5": _action_explain_writes,
+            "5": lambda: _action_export_posts(client),
+            "6": _action_explain_writes,
         }
         handler = handlers.get(choice)
         if handler is None:
