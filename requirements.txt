@@ -1,4 +1,1 @@
-mechanize
-requests
-lolcat
-phonenumbers
+requests>=2.31

@@ -11,3 +11,10 @@
 
 pkg/
 src/
+
+# never commit tokens
+login.txt
+*.env
+.env
+__pycache__/
+*.pyc
