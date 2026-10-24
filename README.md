@@ -1,12 +1,16 @@
-# fbselftool
+# fbselftool & instaselftool
 
-A small, **legal** command-line helper for your **own** Facebook account,
-built on Facebook's **official Graph API**.
+Small, **legal** command-line helpers for your **own** Facebook and Instagram
+accounts, built on the **official Graph APIs**.
+
+- **`fbselftool`** — your own Facebook account (and Pages you administer).
+- **`instaselftool`** — your own Instagram Professional account (see the
+  [Instagram section](#instagram-instaselftool) below).
 
 This is a clean Python 3 rebuild of an old Python 2 project. The original was
 a "Facebook hacking" tool; this rebuild keeps only the features that act on
 *your own account* through the official API, and drops everything abusive.
-It never impersonates the Facebook mobile app, never scrapes, and never
+It never impersonates the Facebook/Instagram apps, never scrapes, and never
 touches anyone else's data.
 
 > **It only ever acts on the account that owns the access token you supply.**
@@ -167,19 +171,82 @@ python -m fbselftool
 
 The token is never written to disk and never logged.
 
+---
+
+## Instagram (`instaselftool`)
+
+A companion tool for your **own Instagram Professional account**, built on the
+official **Instagram Graph API** (which also runs on `graph.facebook.com`).
+Same rules as the Facebook side: only your own account, official API only, no
+scraping, no app impersonation.
+
+### Requirement
+
+The Instagram Graph API only works with an Instagram **Professional** account
+(Business or Creator) that is **linked to a Facebook Page**. A personal
+Instagram account cannot be used. The tool finds your Instagram account through
+that linked Page (`/me/accounts` → `instagram_business_account`).
+
+### What it does
+
+| Option | What it does | Permission needed |
+| ------ | ------------ | ----------------- |
+| Show my profile | Username, name, bio, website, follower/following/media counts | `instagram_basic` |
+| Export my media | Save your media (id, caption, type, permalink, timestamp, like/comment counts) to a JSON backup | `instagram_basic` |
+| Account insights | Reach, follower count, etc. for your account | `instagram_manage_insights` |
+| Media insights | Reach, likes, comments, saves for one media item | `instagram_manage_insights` |
+| Comments + reply | Read comments on one of your media and reply to one (asks to confirm) | `instagram_manage_comments` |
+| Publish a photo | Publish a photo by **public image URL** (asks to confirm) | `instagram_content_publish` |
+| Publish a reel | Publish a video/reel by **public video URL** (waits for processing, asks to confirm) | `instagram_content_publish` |
+
+Finding the linked account also needs `pages_show_list`. All of these
+`instagram_*` permissions require Facebook **App Review / Advanced Access** to
+work beyond your own test users.
+
+> **Publishing note:** Instagram's official content-publishing endpoint fetches
+> media from a **publicly reachable URL** you provide — there is no direct
+> upload of a local file for photos, and videos are processed asynchronously
+> (the tool polls until processing finishes before publishing).
+
+### Usage
+
+```bash
+export IG_ACCESS_TOKEN="your-user-or-page-token"   # falls back to FB_ACCESS_TOKEN
+python -m instaselftool
+```
+
+...or run it and paste the token when prompted. Same token rules: in memory
+only, never written to disk.
+
+### Not possible through the official API (so it isn't offered)
+
+- Acting on a **personal** (non-Professional) Instagram account.
+- Reading or acting on **anyone else's** account, followers, or DMs by
+  scraping.
+- Auto-follow / unfollow, bulk actions, or any growth-automation — not exposed
+  by the official API for that purpose and against the Platform Terms.
+
+---
+
 ## Project layout
 
 ```
-fbselftool/
-  __init__.py     package metadata
-  __main__.py     `python -m fbselftool` entry point
-  api.py          official Graph API client (read-only, own account)
-  cli.py          interactive menu
+fbselftool/        Facebook self-account tool
+  __init__.py      package metadata
+  __main__.py      `python -m fbselftool` entry point
+  api.py           official Graph API client (own account + your Pages)
+  cli.py           interactive menu
+
+instaselftool/     Instagram self-account tool
+  __init__.py      package metadata
+  __main__.py      `python -m instaselftool` entry point
+  api.py           official Instagram Graph API client (your own IG account)
+  cli.py           interactive menu
 ```
 
 ## Legal
 
-Use this only on your own account, with your own token. You are responsible
-for complying with Facebook's
+Use these only on your own accounts, with your own token. You are responsible
+for complying with Facebook's and Instagram's
 [Platform Terms](https://developers.facebook.com/terms/) and all applicable
-laws. This tool is provided as-is, with no warranty.
+laws. These tools are provided as-is, with no warranty.
