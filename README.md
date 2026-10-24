@@ -1,139 +1,137 @@
-#### Thank You-🙏🏼
+# fbselftool
 
-<p>
-<img src="https://visitor-badge.laobi.icu/badge?page_id=HackerWaSi" alt="visitor badge"/>
-</p>
+A small, **legal** command-line helper for your **own** Facebook account,
+built on Facebook's **official Graph API**.
 
+This is a clean Python 3 rebuild of an old Python 2 project. The original was
+a "Facebook hacking" tool; this rebuild keeps only the features that act on
+*your own account* through the official API, and drops everything abusive.
+It never impersonates the Facebook mobile app, never scrapes, and never
+touches anyone else's data.
 
-Evil Devill (Devil FaceBook Hacking Tool)
-                
-**username** `hacker`
-**password** `wasii`
-<p align="center">
-  <a href="http://mocrz.blogspot.com/">
-    <img src="https://img.shields.io/badge/EvilDevil-Mocrz-lightgrey">
-  </a> 
-  <a href="https://github.com/evildevill/Devil/releases">
-    <img src="https://img.shields.io/badge/release-v3.0.0-blue">
-  </a>
-  <a href="https://wikipedia.org/wiki/Shell_script">
-    <img src="https://img.shields.io/badge/language-shell-green.svg">
- </a>
-  <a href="https://github.com/evildevill/Devil">
-      <img src="https://img.shields.io/badge/issue-0%20open-green">
-  </a>
-  <a href="https://github.com/evildevill/Devil/wiki">
-      <img src="https://img.shields.io/badge/wiki-Devil-lightgrey">
- </a>
-  <a href="https://twitter.com/hackerwasii">
-    <img src="https://img.shields.io/badge/twitter-Hackerwasi-blue.svg">
- </a>
-</p>
+> **It only ever acts on the account that owns the access token you supply.**
 
-![Evil-Devil](https://github.com/evildevill/Devil/blob/master/ascets/Screenshot_2020-08-30-14-16-35.png)
+---
 
-***
+## What it does
 
-# About Devil Tool
+All actions below are **read-only** and run against the official Graph API
+(`graph.facebook.com`, pinned to `v21.0`):
 
-```
-Facebook tools keep getting more and more accessible to beginners, and the Devil Tool 
-is a framework of serious Facebook Accounts Grabhing tools that can be explored easily from within it. 
-This powerful and simple tool can be used for everything from installing new add-ons to grabbing 
-a Facebook Accounts in a matter of seconds. Plus, it's easy to install, set up, and utilize.
-```
+| Option | What it shows |
+| ------ | ------------- |
+| Show my profile | Your own `id` and `name` (`public_profile`) |
+| Show my token's permissions | Which scopes your token was granted |
+| List my own posts | Your own posts, newest first (`user_posts`) |
+| Show my friend count | Your total friend count only (see caveat below) |
+| Export my own posts | Save your own posts to a JSON file (`user_posts`) |
+| Explain write actions | Why deleting posts / accepting requests / unfriending isn't possible |
 
-***
+The export writes a JSON file (default `my_posts_<timestamp>.json`, or a name
+you choose) containing each post's id, created time, message/story text, and
+permalink. It is a read-only backup of your own content — it does not change
+or delete anything on Facebook.
 
-# Getting started
+## What was removed, and why
 
-## System requirements 
+The original project has been **removed entirely** from this repository. None
+of it was ported or referenced. Removed features:
 
-* Devil Framework only supports two OS.
+- **Password brute-forcing / "account cloning" / login guessing** — this is
+  account takeover. It is illegal and abusive. Dropped.
+- **Harvesting other people's IDs, emails, and phone numbers from friend
+  lists** — this is scraping other people's personal data. Dropped.
+- **Impersonating the Facebook Android app** — the old code sent a spoofed
+  `User-Agent` and a hard-coded app token to a private mobile endpoint. That
+  violates Facebook's Platform Terms. This rebuild uses only the official,
+  documented Graph API with a token you generate yourself.
 
-```
-Devil Framework only supports two 
-operating systems - Kali Linux and Termux!
-```
+The old tool also stored your token in a plaintext `login.txt` file and ran
+`pip install` / `rm -rf` automatically. None of that happens here — the token
+is held **in memory only**, and the tool installs and deletes nothing.
 
+## What is *not* possible (and isn't faked)
 
-## Devil Tool installation
+The three "self-account" write actions from the original tool are **not
+available** through the official Graph API for a normal third-party app on a
+personal account, so this rebuild does **not** implement them:
 
-```
-> apt-get update -y
+- **Unfriend** — the `/me/friends` edge is documented as read-only ("You
+  can't delete using this edge") and was removed after Graph API v3.2.
+- **Accept friend requests** — there is no official edge to read or accept a
+  person's incoming friend requests.
+- **Delete your own posts** — publishing to and deleting from a personal
+  timeline was removed together with the `publish_actions` permission in 2018.
+  `user_posts` grants read-only access only.
 
-> apt-get install python2 -y
+Even the friend count is limited: the Graph API only returns a *number*, and
+only counts friends who also use the same app — it cannot list, add, or remove
+friends.
 
-> pip2 install mechanize
+To actually delete posts, manage friend requests, or unfriend, use the
+Facebook website or app directly. (Post management *is* available via the API
+for **Pages you administer**, which is a different thing from your personal
+timeline and out of scope for this tool.)
 
-> pip2 install requests
+---
 
-> apt-get install git -y
+## Requirements
 
-> git clone https://github.com/evildevill/Devil.git
+- Python 3.11+
+- [`requests`](https://pypi.org/project/requests/)
 
-> cd Devil
-
-> chmod +x *
-
-> python2 wasi.py 
-
-```
-
-```
-Also, we do not recommend to change the source code of ehtools because 
-it is very complex and you can mess up something and disrupt the framework!
-```
-
-***
-
-# Devil Framework execution
-
-```
-To run Devil Framework you should 
-execute the following command.
+```bash
+pip install -r requirements.txt
 ```
 
-> python2 Devil.py
+## Getting a user access token
 
-***
+1. Go to [developers.facebook.com](https://developers.facebook.com/) and
+   create an app (type: *Consumer*) if you don't have one.
+2. Open the [Graph API Explorer](https://developers.facebook.com/tools/explorer/).
+3. Select your app, then **Generate Access Token**.
+4. Add the permissions you want to use and grant them for **your own**
+   account:
+   - `public_profile` — profile (name + id)
+   - `user_posts` — list your own posts
+   - `user_friends` — your friend count
+5. Copy the generated **User Token**.
 
-# Why Devil Framework
+Tokens from the Explorer are short-lived (about an hour), which is fine for a
+quick session. See Facebook's docs on
+[access tokens](https://developers.facebook.com/docs/facebook-login/guides/access-tokens/)
+for longer-lived tokens.
 
-* More than 38 tools for pentesting installed by default.
+## Usage
+
+Provide the token either via an environment variable:
+
+```bash
+export FB_ACCESS_TOKEN="your-user-token"
+python -m fbselftool
+```
+
+...or just run it and paste the token when prompted (input is hidden):
+
+```bash
+python -m fbselftool
+```
+
+The token is never written to disk and never logged.
+
+## Project layout
 
 ```
-More than 38 options installed by default 
-you can find in Devil, this is tools such 
-as MetaSploit, Pupy and other tools!
+fbselftool/
+  __init__.py     package metadata
+  __main__.py     `python -m fbselftool` entry point
+  api.py          official Graph API client (read-only, own account)
+  cli.py          interactive menu
 ```
 
-* Password protection and config encryption.
+## Legal
 
-```
-In version 2.1.6 we added pasword protection, we added 
-it for users who think that his/her friend or parents will 
-turn into Devil and will remove or destroy it. Only for this 
-people we created Devil Framework password protection.
-```
-
-
-
-
-
-# SubScribe Our YouTube Channel
-
-<a href="https://www.youtube.com/channel/UC0bX56PZ_nMZw3t4p90SYyQ">
-<p><img src="https://img.shields.io/badge/YouTube-TheLinuxChoice-blue.svg"></p>
-</a>
-
-
-![devil-yellow](https://github.com/evildevill/Devil/blob/master/ascets/youtube%20channel.png)
-
-# Devil Framework disclaimer
-
-```
-Usage of the Devil Framework for attacking targets without prior mutual consent is illegal.
-It is the end user's responsibility to obey all applicable local, state, federal, and international laws.
-Developers assume no liability and are not responsible for any misuse or damage caused by this program.
-```
+Use this only on your own account, with your own token. You are responsible
+for complying with Facebook's
+[Platform Terms](https://developers.facebook.com/terms/) and all applicable
+laws. This tool is provided as-is, with no warranty.
